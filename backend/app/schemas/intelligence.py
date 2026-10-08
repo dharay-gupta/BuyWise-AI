@@ -3,6 +3,26 @@ from typing import Optional, List, Dict, Any
 from app.schemas.product import NormalizedProduct
 
 
+class ExplanationFactor(BaseModel):
+    name: str
+    observation: str
+    interpretation: str
+    strength: str
+
+
+class RecommendationExplanation(BaseModel):
+    summary: str
+    factors: List[ExplanationFactor] = []
+    confidence_note: str = "Based on current observed market data."
+    data_sources: List[str] = ["Google Shopping"]
+
+
+class ProductAnalysis(BaseModel):
+    strengths: List[str] = []
+    weaknesses: List[str] = []
+    neutral: List[str] = []
+
+
 class SearchIntent(BaseModel):
     product_query: str
     budget_min: Optional[float] = None
@@ -43,6 +63,8 @@ class EnhancedProduct(NormalizedProduct):
     insights: List[str] = []
     tradeoff_explanation: Optional[str] = None
     market_savings: Optional[str] = None
+    recommendation_explanation: Optional[RecommendationExplanation] = None
+    analysis: Optional[ProductAnalysis] = None
 
 
 class Recommendation(BaseModel):

@@ -7,6 +7,8 @@ from app.intelligence.recommendations import generate_recommendations
 from app.intelligence.tradeoffs import generate_tradeoff, generate_savings_text
 from app.intelligence.merchant_analysis import analyze_merchants
 from app.intelligence.market_insight import generate_market_insights
+from app.intelligence.explainer import explain_recommendation
+from app.intelligence.strengths_weaknesses import analyze_strengths_weaknesses
 import logging
 
 logger = logging.getLogger(__name__)
@@ -83,6 +85,28 @@ def process_intelligent_search(query: str, mode: str = "balanced") -> Intelligen
 
     # 6. Recommendations — pass intent so budget filtering applies
     recommendations = generate_recommendations(enhanced_products, market, intent)
+
+    # 6.5 Add explanations and strengths/weaknesses
+    recommended_ids = {}
+    if recommendations.best_overall:
+        recommended_ids[recommendations.best_overall.product_id] = "best_overall"
+    if recommendations.best_value:
+        recommended_ids[recommendations.best_value.product_id] = "best_value"
+    if recommendations.cheapest:
+        recommended_ids[recommendations.cheapest.product_id] = "cheapest"
+    if recommendations.highest_rated:
+        recommended_ids[recommendations.highest_rated.product_id] = "highest_rated"
+    if recommendations.premium_pick:
+        recommended_ids[recommendations.premium_pick.product_id] = "premium_pick"
+    if recommendations.hidden_gem:
+        recommended_ids[recommendations.hidden_gem.product_id] = "hidden_gem"
+
+    for product in enhanced_products:
+        product.analysis = analyze_strengths_weaknesses(product, market, intent)
+        if product.product_id in recommended_ids:
+            product.recommendation_explanation = explain_recommendation(
+                product, market, intent, recommended_ids[product.product_id]
+            )
 
     # 7. Merchant Intelligence
     merchant_stats = analyze_merchants(enhanced_products)

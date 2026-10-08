@@ -319,7 +319,10 @@ function renderPicks(data) {
           <div class="bw-pick-title" title="${escAttr(p.title || '')}">${escHtml(p.title || 'Unknown Product')}</div>
           <div class="bw-pick-price">${escHtml(price)}</div>
           <div class="bw-pick-score">BuyWise Score: ${score}/100</div>
-          <div class="bw-pick-reason">${escHtml(rec.reason)}</div>
+          <div class="bw-pick-reason">
+            <strong>Why BuyWise Recommends:</strong><br>
+            ${p.recommendation_explanation ? escHtml(p.recommendation_explanation.summary) : escHtml(rec.reason)}
+          </div>
           <div class="bw-pick-actions">
             <a href="${escAttr(p.product_link || '#')}" target="_blank" rel="noopener" class="bw-btn bw-btn-primary bw-btn-sm" ${!p.product_link ? 'tabindex="-1"' : ''}>View Product ↗</a>
             <button class="bw-btn bw-btn-compare bw-btn-sm" id="cmp-pick-${escAttr(p.product_id || p.title || '')}" onclick="event.stopPropagation();toggleCompare('${escAttr(p.product_id || p.title || '')}')">+ Compare</button>
@@ -568,6 +571,40 @@ function openProductModal(productId) {
        </div>`
     : '';
 
+  // Analysis (Strengths & Weaknesses)
+  let swHtml = '';
+  if (p.analysis && (p.analysis.strengths.length > 0 || p.analysis.weaknesses.length > 0)) {
+    swHtml += `<div style="margin-top:1.5rem;">
+      <div style="font-size:0.75rem;font-weight:600;text-transform:uppercase;letter-spacing:0.08em;color:var(--text-muted);margin-bottom:0.75rem;">Strengths & Weaknesses</div>
+      <div style="display:flex;flex-direction:column;gap:0.5rem;">`;
+    p.analysis.strengths.forEach(s => {
+      swHtml += `<div style="font-size:0.85rem;color:var(--accent-success);">✓ ${escHtml(s)}</div>`;
+    });
+    p.analysis.weaknesses.forEach(w => {
+      swHtml += `<div style="font-size:0.85rem;color:var(--accent-warning);">⚠ ${escHtml(w)}</div>`;
+    });
+    swHtml += `</div></div>`;
+  }
+
+  // Explanation
+  let expHtml = '';
+  if (p.recommendation_explanation) {
+    const ex = p.recommendation_explanation;
+    expHtml += `<div style="margin-top:1.5rem;background:var(--bg-surface);border:1px solid rgba(255,255,255,0.1);border-radius:var(--radius-md);padding:1rem;">
+      <div style="font-size:0.75rem;font-weight:600;text-transform:uppercase;letter-spacing:0.08em;color:var(--text-muted);margin-bottom:0.75rem;">Why BuyWise Recommends This</div>
+      <div style="font-size:0.85rem;margin-bottom:1rem;color:var(--text-primary);">${escHtml(ex.summary)}</div>
+      <div style="display:flex;flex-direction:column;gap:0.75rem;">`;
+    ex.factors.forEach(f => {
+      const icon = f.strength === 'strong' ? '✓' : f.strength === 'weak' ? '⚠' : '•';
+      const color = f.strength === 'strong' ? 'var(--accent-success)' : f.strength === 'weak' ? 'var(--accent-warning)' : 'var(--text-secondary)';
+      expHtml += `<div style="font-size:0.85rem;">
+        <strong style="color:${color};">${icon} ${escHtml(f.name)}</strong><br>
+        <span style="color:var(--text-muted);">${escHtml(f.observation)}</span>
+      </div>`;
+    });
+    expHtml += `</div></div>`;
+  }
+
   // Savings
   const savingsHtml = p.market_savings
     ? `<div class="bw-savings-text mt-1">💡 ${escHtml(p.market_savings)}</div>`
@@ -602,6 +639,9 @@ function openProductModal(productId) {
         <div style="font-size:0.75rem;font-weight:600;text-transform:uppercase;letter-spacing:0.08em;color:var(--text-muted);margin-bottom:0.75rem;">Score Breakdown</div>
         ${breakdownHtml}
       </div>` : ''}
+
+    ${expHtml}
+    ${swHtml}
 
     ${tradeoffHtml}
 
