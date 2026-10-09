@@ -178,7 +178,7 @@ function showError(msg) {
   document.getElementById('productGrid').innerHTML =
     `<div class="bw-error-state" style="grid-column:1/-1">⚠️ ${escHtml(msg)}</div>`;
   // Hide optional sections
-  ['picksSection','filtersSection','comparisonSection','insightsSection','merchantSection','chartsSection'].forEach(id => {
+  ['intentSection','picksSection','filtersSection','comparisonSection','insightsSection','merchantSection','chartsSection'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.style.display = 'none';
   });
@@ -193,7 +193,7 @@ function showEmpty(query) {
        <div>No products found for <strong>${escHtml(query)}</strong></div>
        <div style="font-size:0.82rem;color:var(--text-muted);margin-top:0.5rem;">Try a broader search term or different budget range.</div>
      </div>`;
-  ['picksSection','filtersSection','comparisonSection','insightsSection','merchantSection','chartsSection'].forEach(id => {
+  ['intentSection','picksSection','filtersSection','comparisonSection','insightsSection','merchantSection','chartsSection'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.style.display = 'none';
   });
@@ -203,6 +203,7 @@ function showEmpty(query) {
 // Render All Sections
 // ============================================================
 function renderAll(data) {
+  renderIntent(data.intent);
   renderSummary(data);
   renderPicks(data);
   renderFilters(data.products);
@@ -625,6 +626,7 @@ function openProductModal(productId) {
       ${p.old_price ? `<span style="font-size:0.9rem;text-decoration:line-through;color:var(--text-muted);">${escHtml(p.old_price)}</span>` : ''}
     </div>
     ${savingsHtml}
+    ${renderVisualPricePosition(p, true)}
 
     <div style="font-size:0.85rem;color:var(--text-secondary);margin-bottom:0.75rem;">
       ${p.rating ? `⭐ ${p.rating}` : ''}
@@ -898,6 +900,7 @@ function generateProductCard(p) {
         <div class="bw-product-rating">${p.rating ? `⭐ ${p.rating}` : ''}${p.reviews ? ` (${p.reviews.toLocaleString('en-IN')} reviews)` : ''}</div>
         ${scoreBadge}
         ${savingsHtml}
+        ${renderVisualPricePosition(p, false)}
         <div class="bw-product-actions">
           ${p.product_link
             ? `<a href="${escAttr(p.product_link)}" target="_blank" rel="noopener" class="bw-btn bw-btn-primary bw-btn-sm">View ↗</a>`
@@ -933,4 +936,93 @@ function escAttr(str) {
     .replace(/'/g, '&#039;')
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;');
+}
+function renderIntent(intent) {
+  const section = document.getElementById('intentSection');
+  const content = document.getElementById('intentContent');
+  
+  if (!intent) {
+    section.style.display = 'none';
+    return;
+  }
+  
+  section.style.display = 'block';
+  
+  const bMin = intent.budget_min ? `₹${intent.budget_min.toLocaleString('en-IN')}` : null;
+  const bMax = intent.budget_max ? `₹${intent.budget_max.toLocaleString('en-IN')}` : null;
+  let budgetStr = 'Not detected';
+  if (bMin && bMax) budgetStr = `${bMin} - ${bMax}`;
+  else if (bMin) budgetStr = `Above ${bMin}`;
+  else if (bMax) budgetStr = `Under ${bMax}`;
+  
+  const categoryStr = intent.category ? intent.category : 'Not detected';
+  
+  let useCasesHtml = 'Not detected';
+  if (intent.use_case_signals && intent.use_case_signals.length > 0) {
+    useCasesHtml = intent.use_case_signals.map(uc => `<span class="badge">${uc}</span>`).join('');
+  }
+  
+  const priorityStr = intent.priority ? intent.priority.replace('_', ' ') : 'Not detected';
+  
+  content.innerHTML = `
+    <div class="bw-intent-item">
+      <span class="bw-intent-label">Original Query</span>
+      <span class="bw-intent-value" title="${escAttr(intent.product_query || '')}">${escHtml((intent.product_query || '').substring(0, 30))}${(intent.product_query || '').length > 30 ? '...' : ''}</span>
+    </div>
+    <div class="bw-intent-item">
+      <span class="bw-intent-label">Detected Budget</span>
+      <span class="bw-intent-value">${budgetStr}</span>
+    </div>
+    <div class="bw-intent-item">
+      <span class="bw-intent-label">Category</span>
+      <span class="bw-intent-value" style="text-transform: capitalize;">${categoryStr}</span>
+    </div>
+    <div class="bw-intent-item">
+      <span class="bw-intent-label">Use Cases</span>
+      <span class="bw-intent-value">${useCasesHtml}</span>
+    </div>
+    <div class="bw-intent-item">
+      <span class="bw-intent-label">Decision Mode</span>
+      <span class="bw-intent-value" style="text-transform: capitalize;">${priorityStr}</span>
+    </div>
+  `;
+}
+
+// ============================================================
+// Visual Price Position
+// ============================================================
+function renderVisualPricePosition(p, isModal) {
+  if (p.price_percentile == null || isNaN(p.price_percentile) || p.price == null) return '';
+  let pct = p.price_percentile;
+  if (pct < 0) pct = 0;
+  if (pct > 100) pct = 100;
+  
+  let label = 'Near Median';
+  if (pct <= 33) label = 'Below Median';
+  else if (pct >= 67) label = 'Above Median';
+
+  const sizeStyles = isModal 
+    ? 'height: 6px; margin: 0.5rem 0; width: 100%;'
+    : 'height: 4px; margin: 0.35rem 0; width: 100%;';
+    
+  const fontStyles = isModal
+    ? 'font-size: 0.75rem;'
+    : 'font-size: 0.7rem;';
+  
+  const markerTop = isModal ? '-4px' : '-2px';
+  const markerBottom = isModal ? '-4px' : '-2px';
+  const markerWidth = isModal ? '4px' : '3px';
+  
+  return `
+    <div style="margin-top:0.75rem; margin-bottom:0.75rem;">
+      <div style="display:flex; justify-content:space-between; ${fontStyles} color:var(--text-muted); margin-bottom:4px;">
+        <span style="font-weight:600;">Price Position</span>
+        <span>${label}</span>
+      </div>
+      <div style="position:relative; background:linear-gradient(to right, var(--accent-success), var(--text-muted), var(--accent-warning)); border-radius:4px; ${sizeStyles}">
+        <div style="position:absolute; top:${markerTop}; bottom:${markerBottom}; left:${pct}%; width:${markerWidth}; background:#fff; border-radius:2px; box-shadow:0 1px 3px rgba(0,0,0,0.4); transform:translateX(-50%);"></div>
+      </div>
+      ${isModal ? `<div style="font-size:0.65rem; color:var(--text-muted); margin-top:4px;">Based on current observed results</div>` : ''}
+    </div>
+  `;
 }

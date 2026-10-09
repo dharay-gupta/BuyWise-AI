@@ -78,3 +78,13 @@ def test_missing_values_graceful_handling():
     intent = parse_intent("query")
     scored = score_product(p, market, intent)
     assert scored.buywise_score is None # Expecting None when no active weights can be calculated
+
+def test_intent_category_use_case():
+    i = parse_intent("gaming laptop under 50000 for coding")
+    assert i.category == "laptop"
+    assert "gaming" in i.use_case_signals
+    assert "coding" in i.use_case_signals
+
+    i2 = parse_intent("noise cancelling headphones for travel")
+    assert i2.category == "headphone"
+    assert "travel" in i2.use_case_signals

@@ -150,8 +150,49 @@ def parse_intent(query: str) -> SearchIntent:
     raw_words = [w for w in clean_query.split() if w not in stop_words and len(w) > 1]
     keywords = raw_words
 
+    # -----------------------------------------------------------------------
+    # 6. Category and Use Case Extraction
+    # -----------------------------------------------------------------------
+    category = None
+    use_case_signals = []
+
+    categories = {
+        "laptop": ["laptop"],
+        "phone": ["phone", "smartphone"],
+        "headphone": ["headphone", "headphones"],
+        "earbud": ["earbud", "earbuds", "earphones"],
+        "camera": ["camera", "cameras"],
+        "watch": ["watch", "watches", "smartwatch"],
+        "monitor": ["monitor"],
+        "mouse": ["mouse", "mice"],
+        "keyboard": ["keyboard"],
+        "tablet": ["tablet", "tablets"],
+        "tv": ["tv", "television", "televisions"],
+        "speaker": ["speaker", "speakers"]
+    }
+
+    for cat_name, syns in categories.items():
+        if any(_has_word(phrase) for phrase in syns):
+            category = cat_name
+            break
+            
+    use_cases = {
+        "gaming": ["gaming", "gamer"],
+        "photography": ["photography", "camera", "photos", "vlogging"],
+        "coding": ["coding", "programming", "developer"],
+        "fitness": ["fitness", "gym", "running", "workout"],
+        "office": ["office", "work", "business"],
+        "travel": ["travel", "traveling", "commute", "noise cancelling"]
+    }
+
+    for uc, syns in use_cases.items():
+        if any(phrase in query_lower for phrase in syns):
+            use_case_signals.append(uc)
+
     return SearchIntent(
         product_query=clean_query if clean_query else query,
+        category=category,
+        use_case_signals=use_case_signals,
         budget_min=budget_min,
         budget_max=budget_max,
         priority=priority,

@@ -25,6 +25,8 @@ class ProductAnalysis(BaseModel):
 
 class SearchIntent(BaseModel):
     product_query: str
+    category: Optional[str] = None
+    use_case_signals: List[str] = []
     budget_min: Optional[float] = None
     budget_max: Optional[float] = None
     priority: str = "balanced"  # balanced, cheapest, best_value, quality_first, cheap, premium, highest_rated
