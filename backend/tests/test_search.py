@@ -43,3 +43,29 @@ def test_search_endpoint_missing_query():
     # FastAPI automatically validates missing required query params
     response = client.get("/api/search")
     assert response.status_code == 422 # Unprocessable Entity
+
+
+@patch("app.services.search_service.serpapi_client")
+def test_search_endpoint_includes_market_confidence(mock_serpapi_client):
+    mock_serpapi_client.search_google_shopping.return_value = {
+        "shopping_results": [
+            {
+                "title": "Mock Product",
+                "price": "₹2,000",
+                "extracted_price": 2000.0,
+                "rating": 4.5,
+                "reviews": 120,
+                "source": "Amazon",
+            }
+        ]
+    }
+    response = client.get("/api/search?q=phone")
+    assert response.status_code == 200
+    data = response.json()
+    assert "confidence" in data
+    assert data["confidence"] is not None
+    assert "score" in data["confidence"]
+    assert "level" in data["confidence"]
+    assert data["confidence"]["level"] == "limited"  # 1 product < 5
+    assert "confidence" in data["market"]
+    assert data["market"]["confidence"] is not None

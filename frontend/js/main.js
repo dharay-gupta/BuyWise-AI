@@ -251,6 +251,31 @@ function renderSummary(data) {
 
   // Market Overview
   const fmt = (v) => v != null ? `₹${Number(v).toLocaleString('en-IN', {maximumFractionDigits: 0})}` : 'N/A';
+
+  // Market Evidence Quality / Confidence
+  const conf = market.confidence || data.confidence;
+  let confidenceHtml = '';
+  if (conf) {
+    const level = conf.level || 'limited';
+    const levelIcon = level === 'high' ? '🟢' : level === 'moderate' ? '🟡' : '⚪';
+    const levelLabel = level.charAt(0).toUpperCase() + level.slice(1);
+    const scoreVal = typeof conf.score === 'number' ? conf.score.toFixed(0) : '—';
+    const reasonsTitle = (conf.reasons || []).join(' · ');
+    const reasonsHtml = (conf.reasons && conf.reasons.length > 0)
+      ? `<div class="bw-confidence-reasons">${conf.reasons.slice(0, 2).map(r => `• ${escHtml(r)}`).join('<br>')}</div>`
+      : '';
+
+    confidenceHtml = `
+      <div class="bw-stat-row bw-stat-row-confidence">
+        <span class="bw-stat-label" title="Completeness and breadth of observed market data">Evidence Quality</span>
+        <span class="bw-stat-value" title="${escAttr(reasonsTitle)}">
+          <span class="bw-confidence-pill ${escAttr(level)}">${levelIcon} ${escHtml(levelLabel)} (${scoreVal}/100)</span>
+        </span>
+      </div>
+      ${reasonsHtml}
+    `;
+  }
+
   document.getElementById('marketContent').innerHTML = `
     <div class="bw-stat-row">
       <span class="bw-stat-label">Lowest Observed Price</span>
@@ -272,6 +297,7 @@ function renderSummary(data) {
       <span class="bw-stat-label">Products with Price Data</span>
       <span class="bw-stat-value">${market.valid_prices_count || 0} / ${market.products_analyzed || 0}</span>
     </div>
+    ${confidenceHtml}
   `;
 }
 

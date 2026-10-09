@@ -1377,3 +1377,45 @@ h1, h2, h3, h4, h5, h6 {
   margin-left: 0.4rem;
 }
 
+/* Market Evidence Quality / Confidence */
+.bw-stat-row-confidence {
+  margin-top: 0.4rem;
+  padding-top: 0.45rem;
+  border-top: 1px dashed var(--border-glass);
+}
+
+.bw-confidence-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.74rem;
+  font-weight: 600;
+  padding: 0.15rem 0.55rem;
+  border-radius: 100px;
+}
+
+.bw-confidence-pill.high {
+  background: rgba(45, 211, 111, 0.15);
+  color: var(--accent-success);
+  border: 1px solid rgba(45, 211, 111, 0.35);
+}
+
+.bw-confidence-pill.moderate {
+  background: rgba(255, 193, 7, 0.15);
+  color: var(--accent-warning);
+  border: 1px solid rgba(255, 193, 7, 0.35);
+}
+
+.bw-confidence-pill.limited {
+  background: rgba(160, 168, 204, 0.12);
+  color: var(--text-secondary);
+  border: 1px solid rgba(160, 168, 204, 0.25);
+}
+
+.bw-confidence-reasons {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  margin-top: 0.35rem;
+  line-height: 1.45;
+  padding-left: 0.2rem;
+}

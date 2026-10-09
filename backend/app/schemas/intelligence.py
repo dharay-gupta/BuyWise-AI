@@ -33,6 +33,25 @@ class SearchIntent(BaseModel):
     keywords: List[str] = []
 
 
+class MarketConfidence(BaseModel):
+    """
+    BuyWise evidence-quality indicator reflecting the completeness,
+    breadth, and statistical density of observed search results.
+    Not a calibrated probability or guarantee of whole-market representation.
+    """
+    score: float = 0.0
+    level: str = "limited"  # "high", "moderate", "limited"
+    sample_size: int = 0
+    price_coverage_pct: float = 0.0
+    rating_coverage_pct: float = 0.0
+    merchant_diversity_count: int = 0
+    reasons: List[str] = []
+    disclaimer: str = (
+        "Reflects completeness and breadth of current observed search results, "
+        "not a statistical guarantee of whole-market representation."
+    )
+
+
 class MarketStats(BaseModel):
     products_analyzed: int
     valid_prices_count: int
@@ -42,6 +61,7 @@ class MarketStats(BaseModel):
     average_price: Optional[float] = None
     median_price: Optional[float] = None
     price_spread: Optional[float] = None
+    confidence: Optional[MarketConfidence] = None
 
 
 class ScoreBreakdown(BaseModel):
@@ -134,3 +154,4 @@ class IntelligenceResponse(BaseModel):
     products: List[EnhancedProduct] = []
     merchant_stats: Optional[MerchantStats] = None
     market_insights: List[str] = []
+    confidence: Optional[MarketConfidence] = None

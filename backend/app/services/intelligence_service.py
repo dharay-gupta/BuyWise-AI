@@ -11,6 +11,7 @@ from app.intelligence.explainer import explain_recommendation
 from app.intelligence.strengths_weaknesses import analyze_strengths_weaknesses
 from app.intelligence.deal_analysis import analyze_deal
 from app.intelligence.cross_merchant import build_cross_merchant_map
+from app.intelligence.market_confidence import calculate_market_confidence
 import logging
 
 logger = logging.getLogger(__name__)
@@ -34,11 +35,13 @@ def process_intelligent_search(query: str, mode: str = "balanced") -> Intelligen
     products = search_response.products
 
     if not products:
+        empty_conf = calculate_market_confidence([])
         return IntelligenceResponse(
             query=query,
             count=0,
             decision_mode=mode,
             products=[],
+            confidence=empty_conf,
         )
 
     # Convert NormalizedProduct → EnhancedProduct
@@ -54,6 +57,10 @@ def process_intelligent_search(query: str, mode: str = "balanced") -> Intelligen
 
     # 3. Market Analysis (only on valid observed data)
     market = analyze_market(enhanced_products)
+
+    # 3.5 Market Evidence Confidence (Phase 6.1)
+    confidence = calculate_market_confidence(enhanced_products, market)
+    market.confidence = confidence
 
     # 4. Scoring — uses intent.priority (= mode)
     for product in enhanced_products:
@@ -139,4 +146,5 @@ def process_intelligent_search(query: str, mode: str = "balanced") -> Intelligen
         products=enhanced_products,
         merchant_stats=merchant_stats,
         market_insights=market_insights,
+        confidence=confidence,
     )
