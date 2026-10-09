@@ -1227,3 +1227,153 @@ h1, h2, h3, h4, h5, h6 {
   margin-right: 0.25rem;
 }
 
+/* ============================================================
+   Phase 5.3 — Deal Indicators, Cross-Merchant & Modal Deep Dive
+   ============================================================ */
+.bw-discount-badge {
+  display: inline-flex;
+  align-items: center;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #fff;
+  background: linear-gradient(135deg, #ff4d6d, #e63946);
+  padding: 0.15rem 0.5rem;
+  border-radius: var(--radius-sm);
+  margin-left: 0.4rem;
+  vertical-align: middle;
+}
+
+.bw-deal-quality {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 0.15rem 0.5rem;
+  border-radius: 100px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-top: 0.35rem;
+}
+
+.bw-deal-quality.strong {
+  background: rgba(45, 211, 111, 0.15);
+  color: var(--accent-success);
+  border: 1px solid rgba(45, 211, 111, 0.35);
+}
+
+.bw-deal-quality.moderate {
+  background: rgba(255, 193, 7, 0.15);
+  color: var(--accent-warning);
+  border: 1px solid rgba(255, 193, 7, 0.35);
+}
+
+.bw-deal-quality.minimal {
+  background: rgba(160, 168, 204, 0.12);
+  color: var(--text-secondary);
+  border: 1px solid rgba(160, 168, 204, 0.25);
+}
+
+.bw-budget-headroom {
+  font-size: 0.72rem;
+  color: var(--text-secondary);
+  margin-top: 0.25rem;
+  font-weight: 500;
+}
+
+.bw-budget-headroom.over {
+  color: var(--accent-warning);
+}
+
+.bw-cross-merchant-card-hint {
+  font-size: 0.72rem;
+  color: var(--accent-secondary);
+  margin-top: 0.35rem;
+  padding: 0.2rem 0.4rem;
+  background: rgba(76, 201, 240, 0.08);
+  border-radius: var(--radius-sm);
+  border: 1px dashed rgba(76, 201, 240, 0.25);
+}
+
+/* Modal Deep Dive Sections */
+.bw-modal-section {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-glass);
+  border-radius: var(--radius-md);
+  padding: 1.1rem 1.25rem;
+  margin-top: 1rem;
+}
+
+.bw-modal-section-title {
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-muted);
+  margin-bottom: 0.75rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.bw-market-badge {
+  display: inline-flex;
+  align-items: center;
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 0.15rem 0.5rem;
+  border-radius: 100px;
+  background: rgba(76, 201, 240, 0.12);
+  color: var(--accent-secondary);
+  border: 1px solid rgba(76, 201, 240, 0.3);
+  margin-right: 0.35rem;
+  margin-bottom: 0.35rem;
+}
+
+.bw-modal-snippet {
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+  line-height: 1.5;
+  margin-top: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+
+/* Cross-Merchant Table in Modal */
+.bw-cross-merchant-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.8rem;
+  margin-top: 0.5rem;
+}
+
+.bw-cross-merchant-table th {
+  text-align: left;
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  padding: 0.4rem 0.6rem;
+  border-bottom: 1px solid var(--border-glass);
+}
+
+.bw-cross-merchant-table td {
+  padding: 0.5rem 0.6rem;
+  border-bottom: 1px solid var(--border-glass);
+  color: var(--text-primary);
+}
+
+.bw-cross-merchant-table tr:last-child td {
+  border-bottom: none;
+}
+
+.bw-lowest-offer-pill {
+  font-size: 0.68rem;
+  font-weight: 700;
+  padding: 0.1rem 0.4rem;
+  border-radius: 100px;
+  background: rgba(45, 211, 111, 0.18);
+  color: var(--accent-success);
+  border: 1px solid rgba(45, 211, 111, 0.35);
+  margin-left: 0.4rem;
+}
+

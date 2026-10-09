@@ -307,6 +307,9 @@ function renderPicks(data) {
     count++;
 
     const price = p.price || (p.extracted_price != null ? `₹${Number(p.extracted_price).toLocaleString('en-IN')}` : 'N/A');
+    const discountBadge = (p.deal_info && p.deal_info.discount_pct != null && p.deal_info.discount_pct > 0)
+      ? `<span class="bw-discount-badge" title="Advertised merchant discount">${p.deal_info.discount_pct}% off</span>`
+      : '';
     const score = p.buywise_score != null ? p.buywise_score.toFixed(1) : '—';
     const imgHtml = p.thumbnail
       ? `<img src="${escAttr(p.thumbnail)}" alt="${escAttr(p.title || '')}" loading="lazy">`
@@ -318,7 +321,7 @@ function renderPicks(data) {
         <div class="bw-pick-img-wrap">${imgHtml}</div>
         <div class="bw-pick-body">
           <div class="bw-pick-title" title="${escAttr(p.title || '')}">${escHtml(p.title || 'Unknown Product')}</div>
-          <div class="bw-pick-price">${escHtml(price)}</div>
+          <div class="bw-pick-price">${escHtml(price)}${discountBadge}</div>
           <div class="bw-pick-score">BuyWise Score: ${score}/100</div>
           <div class="bw-pick-reason">
             <strong>Why BuyWise Recommends:</strong><br>
@@ -552,9 +555,56 @@ function openProductModal(productId) {
     ? `<img src="${escAttr(p.thumbnail)}" alt="${escAttr(p.title || '')}" style="max-height:200px;max-width:90%;object-fit:contain;">`
     : `<div style="color:var(--text-muted);font-size:0.85rem;">No Image Available</div>`;
 
-  // Tags
+  // SerpApi market badges / tags
+  const marketBadge = (p.badge || p.tag)
+    ? `<span class="bw-market-badge">🏷️ ${escHtml(p.badge || p.tag)}</span>`
+    : '';
+
+  // BuyWise recommendation tags
   const tagsHtml = (p.recommendation_tags || []).length > 0
-    ? `<div class="bw-tags mb-3">${(p.recommendation_tags || []).map(t => `<span class="bw-tag">${escHtml(t)}</span>`).join('')}</div>`
+    ? (p.recommendation_tags || []).map(t => `<span class="bw-tag">${escHtml(t)}</span>`).join('')
+    : '';
+
+  // Snippet description
+  const snippetHtml = p.snippet
+    ? `<p class="bw-modal-snippet">${escHtml(p.snippet)}</p>`
+    : '';
+
+  // Advertised discount badge
+  const discountHtml = (p.deal_info && p.deal_info.discount_pct != null && p.deal_info.discount_pct > 0)
+    ? `<span class="bw-discount-badge" title="Advertised merchant discount">${p.deal_info.discount_pct}% off</span>`
+    : '';
+
+  // BuyWise deal quality assessment
+  let dealQualityHtml = '';
+  if (p.deal_info && p.deal_info.deal_quality) {
+    const dq = p.deal_info.deal_quality;
+    const dqLabel = dq === 'strong' ? '🔥 Strong Deal' : dq === 'moderate' ? '⚡ Moderate Deal' : 'Minimal Discount';
+    dealQualityHtml = `
+      <div style="display:flex;align-items:center;gap:0.5rem;margin-top:0.4rem;flex-wrap:wrap;">
+        <span class="bw-deal-quality ${escAttr(dq)}">${escHtml(dqLabel)}</span>
+        <span style="font-size:0.75rem;color:var(--text-muted);">BuyWise deal assessment based on observed prices vs market median</span>
+      </div>`;
+  }
+
+  // Budget headroom / fit
+  let budgetHeadroomHtml = '';
+  if (p.deal_info && p.deal_info.budget_headroom) {
+    const isOver = p.deal_info.budget_headroom.includes('over');
+    budgetHeadroomHtml = `
+      <div class="bw-budget-headroom ${isOver ? 'over' : ''}" style="margin-top:0.35rem;font-size:0.8rem;">
+        ${isOver ? '⚠️' : '🎯'} <strong>Budget Fit:</strong> ${escHtml(p.deal_info.budget_headroom)}
+      </div>`;
+  }
+
+  // Savings vs market median
+  const savingsHtml = p.market_savings
+    ? `<div class="bw-savings-text mt-1">💡 ${escHtml(p.market_savings)}</div>`
+    : '';
+
+  // Delivery (explicitly identified as merchant-stated)
+  const deliveryHtml = p.delivery
+    ? `<div style="font-size:0.8rem;color:var(--text-muted);margin-top:0.5rem;">🚚 <strong>Merchant Delivery Info:</strong> ${escHtml(p.delivery)} <span style="font-size:0.7rem;color:var(--text-muted);">(merchant-provided; subject to seller terms)</span></div>`
     : '';
 
   // Score badge
@@ -565,9 +615,56 @@ function openProductModal(productId) {
   // Score breakdown
   const breakdownHtml = renderScoreBreakdown(p);
 
+  // Cross-Merchant Offers Section
+  let crossMerchantSectionHtml = '';
+  if (p.cross_merchant && p.cross_merchant.merchant_count > 1 && (p.cross_merchant.merchants || []).length > 0) {
+    const cm = p.cross_merchant;
+    const spreadText = cm.savings_vs_highest ? `<span style="font-size:0.75rem;color:var(--accent-secondary);font-weight:500;">(${escHtml(cm.savings_vs_highest)})</span>` : '';
+    let rowsHtml = '';
+    cm.merchants.forEach(m => {
+      const isLowest = m.is_lowest;
+      const fmtPrice = `₹${Number(m.price).toLocaleString('en-IN', {maximumFractionDigits: 0})}`;
+      const diffText = isLowest
+        ? `<span class="bw-lowest-offer-pill">Lowest Observed</span>`
+        : `<span style="font-size:0.75rem;color:var(--text-muted);">+₹${Number(m.price - cm.lowest_price).toLocaleString('en-IN', {maximumFractionDigits: 0})} vs lowest</span>`;
+      rowsHtml += `
+        <tr>
+          <td><strong style="color:var(--text-primary);">${escHtml(m.merchant)}</strong></td>
+          <td style="font-weight:600;color:${isLowest ? 'var(--accent-success)' : 'var(--text-primary)'};">${fmtPrice}</td>
+          <td>${diffText}</td>
+        </tr>`;
+    });
+
+    crossMerchantSectionHtml = `
+      <div class="bw-modal-section">
+        <div class="bw-modal-section-title">
+          <span>🏪 Cross-Merchant Price Intelligence</span>
+          ${spreadText}
+        </div>
+        <div style="font-size:0.8rem;color:var(--text-secondary);margin-bottom:0.5rem;">
+          Observed across <strong>${cm.merchant_count} merchants</strong> for this product. Lowest offer at <strong>${escHtml(cm.best_merchant || 'observed store')}</strong>.
+        </div>
+        <table class="bw-cross-merchant-table">
+          <thead>
+            <tr>
+              <th>Merchant</th>
+              <th>Observed Price</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${rowsHtml}
+          </tbody>
+        </table>
+        <div style="font-size:0.7rem;color:var(--text-muted);margin-top:0.5rem;">
+          ℹ️ Based on observed Google Shopping results in this query. Does not guarantee live stock or checkout availability.
+        </div>
+      </div>`;
+  }
+
   // Tradeoff explanation
   const tradeoffHtml = p.tradeoff_explanation
-    ? `<div style="background:var(--bg-surface);border-radius:var(--radius-sm);padding:0.75rem 1rem;margin-top:1rem;font-size:0.82rem;color:var(--text-secondary);border-left:3px solid var(--accent-primary);">
+    ? `<div style="background:var(--bg-surface);border-radius:var(--radius-sm);padding:0.75rem 1rem;margin-top:0.75rem;font-size:0.82rem;color:var(--text-secondary);border-left:3px solid var(--accent-primary);">
          <strong style="color:var(--text-primary);">Market Position:</strong><br>${escHtml(p.tradeoff_explanation)}
        </div>`
     : '';
@@ -575,26 +672,30 @@ function openProductModal(productId) {
   // Analysis (Strengths & Weaknesses)
   let swHtml = '';
   if (p.analysis && (p.analysis.strengths.length > 0 || p.analysis.weaknesses.length > 0)) {
-    swHtml += `<div style="margin-top:1.5rem;">
-      <div style="font-size:0.75rem;font-weight:600;text-transform:uppercase;letter-spacing:0.08em;color:var(--text-muted);margin-bottom:0.75rem;">Strengths & Weaknesses</div>
-      <div style="display:flex;flex-direction:column;gap:0.5rem;">`;
+    swHtml += `
+      <div class="bw-modal-section">
+        <div class="bw-modal-section-title">Strengths & Weaknesses</div>
+        <div style="display:flex;flex-direction:column;gap:0.5rem;">`;
     p.analysis.strengths.forEach(s => {
       swHtml += `<div style="font-size:0.85rem;color:var(--accent-success);">✓ ${escHtml(s)}</div>`;
     });
     p.analysis.weaknesses.forEach(w => {
       swHtml += `<div style="font-size:0.85rem;color:var(--accent-warning);">⚠ ${escHtml(w)}</div>`;
     });
-    swHtml += `</div></div>`;
+    swHtml += `</div>${tradeoffHtml}</div>`;
+  } else if (tradeoffHtml) {
+    swHtml += `<div class="bw-modal-section">${tradeoffHtml}</div>`;
   }
 
   // Explanation
   let expHtml = '';
   if (p.recommendation_explanation) {
     const ex = p.recommendation_explanation;
-    expHtml += `<div style="margin-top:1.5rem;background:var(--bg-surface);border:1px solid rgba(255,255,255,0.1);border-radius:var(--radius-md);padding:1rem;">
-      <div style="font-size:0.75rem;font-weight:600;text-transform:uppercase;letter-spacing:0.08em;color:var(--text-muted);margin-bottom:0.75rem;">Why BuyWise Recommends This</div>
-      <div style="font-size:0.85rem;margin-bottom:1rem;color:var(--text-primary);">${escHtml(ex.summary)}</div>
-      <div style="display:flex;flex-direction:column;gap:0.75rem;">`;
+    expHtml += `
+      <div class="bw-modal-section">
+        <div class="bw-modal-section-title">Why BuyWise Recommends This</div>
+        <div style="font-size:0.85rem;margin-bottom:0.75rem;color:var(--text-primary);">${escHtml(ex.summary)}</div>
+        <div style="display:flex;flex-direction:column;gap:0.6rem;">`;
     ex.factors.forEach(f => {
       const icon = f.strength === 'strong' ? '✓' : f.strength === 'weak' ? '⚠' : '•';
       const color = f.strength === 'strong' ? 'var(--accent-success)' : f.strength === 'weak' ? 'var(--accent-warning)' : 'var(--text-secondary)';
@@ -606,46 +707,51 @@ function openProductModal(productId) {
     expHtml += `</div></div>`;
   }
 
-  // Savings
-  const savingsHtml = p.market_savings
-    ? `<div class="bw-savings-text mt-1">💡 ${escHtml(p.market_savings)}</div>`
-    : '';
-
-  // Delivery
-  const deliveryHtml = p.delivery
-    ? `<div style="font-size:0.8rem;color:var(--text-muted);margin-top:0.5rem;">🚚 ${escHtml(p.delivery)}</div>`
-    : '';
-
   document.getElementById('modalBody').innerHTML = `
-    ${tagsHtml}
-    <h5 style="font-size:1.1rem;margin-bottom:0.75rem;line-height:1.4;">${escHtml(p.title || 'Product Details')}</h5>
-    <div style="font-size:0.82rem;color:var(--text-muted);margin-bottom:0.5rem;">from <strong style="color:var(--text-secondary);">${escHtml(p.source || 'Unknown Merchant')}</strong></div>
-
-    <div style="display:flex;align-items:baseline;gap:0.75rem;margin-bottom:0.5rem;">
-      <span style="font-size:1.5rem;font-weight:800;color:var(--accent-success);">${escHtml(price)}</span>
-      ${p.old_price ? `<span style="font-size:0.9rem;text-decoration:line-through;color:var(--text-muted);">${escHtml(p.old_price)}</span>` : ''}
+    <div style="margin-bottom:0.75rem;">
+      <div class="bw-tags mb-2">${marketBadge}${tagsHtml}</div>
+      <h5 style="font-size:1.15rem;margin-bottom:0.4rem;line-height:1.4;">${escHtml(p.title || 'Product Details')}</h5>
+      <div style="font-size:0.82rem;color:var(--text-muted);">from <strong style="color:var(--text-secondary);">${escHtml(p.source || 'Unknown Merchant')}</strong></div>
+      ${snippetHtml}
     </div>
-    ${savingsHtml}
-    ${renderVisualPricePosition(p, true)}
 
-    <div style="font-size:0.85rem;color:var(--text-secondary);margin-bottom:0.75rem;">
-      ${p.rating ? `⭐ ${p.rating}` : ''}
-      ${p.reviews ? `(${p.reviews.toLocaleString('en-IN')} reviews)` : ''}
+    <!-- Section 1: Pricing & Deal Intelligence -->
+    <div class="bw-modal-section">
+      <div class="bw-modal-section-title">Observed Pricing & Deal Intelligence</div>
+      <div style="display:flex;align-items:baseline;gap:0.75rem;margin-bottom:0.4rem;flex-wrap:wrap;">
+        <span style="font-size:1.5rem;font-weight:800;color:var(--accent-success);">${escHtml(price)}</span>
+        ${p.old_price ? `<span style="font-size:0.9rem;text-decoration:line-through;color:var(--text-muted);">${escHtml(p.old_price)}</span>` : ''}
+        ${discountHtml}
+      </div>
+      ${dealQualityHtml}
+      ${budgetHeadroomHtml}
+      ${savingsHtml}
+      ${renderVisualPricePosition(p, true)}
+      <div style="font-size:0.85rem;color:var(--text-secondary);margin-top:0.5rem;">
+        ${p.rating ? `⭐ ${p.rating}` : ''}
+        ${p.reviews ? `(${p.reviews.toLocaleString('en-IN')} observed reviews)` : ''}
+      </div>
+      ${deliveryHtml}
     </div>
-    ${deliveryHtml}
 
-    ${scoreBadge}
+    <!-- Section 2: Cross-Merchant Intelligence (if available) -->
+    ${crossMerchantSectionHtml}
 
-    ${breakdownHtml ? `
-      <div style="margin-top:1.25rem;">
-        <div style="font-size:0.75rem;font-weight:600;text-transform:uppercase;letter-spacing:0.08em;color:var(--text-muted);margin-bottom:0.75rem;">Score Breakdown</div>
-        ${breakdownHtml}
-      </div>` : ''}
-
+    <!-- Section 3: Recommendation Explanation (if recommended) -->
     ${expHtml}
+
+    <!-- Section 4: Strengths & Weaknesses -->
     ${swHtml}
 
-    ${tradeoffHtml}
+    <!-- Section 5: BuyWise Score Breakdown -->
+    ${breakdownHtml ? `
+      <div class="bw-modal-section">
+        <div class="bw-modal-section-title">
+          <span>BuyWise Score Breakdown</span>
+          ${scoreBadge}
+        </div>
+        ${breakdownHtml}
+      </div>` : ''}
 
     <div style="margin-top:1.5rem;display:flex;gap:0.75rem;">
       ${p.product_link
@@ -889,6 +995,28 @@ function generateProductCard(p) {
     ? `<span class="bw-product-old-price">${escHtml(p.old_price)}</span>`
     : '';
 
+  const discountHtml = (p.deal_info && p.deal_info.discount_pct != null && p.deal_info.discount_pct > 0)
+    ? `<span class="bw-discount-badge" title="Advertised merchant discount">${p.deal_info.discount_pct}% off</span>`
+    : '';
+
+  let dealQualityHtml = '';
+  if (p.deal_info && p.deal_info.deal_quality) {
+    const dq = p.deal_info.deal_quality;
+    const dqLabel = dq === 'strong' ? '🔥 Strong Deal' : dq === 'moderate' ? '⚡ Moderate Deal' : 'Minimal Discount';
+    dealQualityHtml = `<div class="bw-deal-quality ${escAttr(dq)}" title="BuyWise deal assessment based on observed prices vs market median">${escHtml(dqLabel)}</div>`;
+  }
+
+  let budgetHeadroomHtml = '';
+  if (p.deal_info && p.deal_info.budget_headroom) {
+    const isOver = p.deal_info.budget_headroom.includes('over');
+    budgetHeadroomHtml = `<div class="bw-budget-headroom ${isOver ? 'over' : ''}" title="Budget headroom">${isOver ? '⚠️' : '🎯'} ${escHtml(p.deal_info.budget_headroom)}</div>`;
+  }
+
+  let crossMerchantHtml = '';
+  if (p.cross_merchant && p.cross_merchant.merchant_count > 1) {
+    crossMerchantHtml = `<div class="bw-cross-merchant-card-hint" title="Observed at multiple merchants">🏪 Also seen at ${p.cross_merchant.merchant_count} stores (from ₹${Number(p.cross_merchant.lowest_price).toLocaleString('en-IN', {maximumFractionDigits: 0})})</div>`;
+  }
+
   return `
     <div class="bw-product-card${inCompare ? ' in-compare' : ''}" data-pid="${escAttr(productId)}">
       <div class="bw-product-img">${imgHtml}</div>
@@ -896,11 +1024,14 @@ function generateProductCard(p) {
         <div class="bw-product-source">${escHtml(p.source || '')}</div>
         ${tagsHtml}
         <div class="bw-product-title" title="${escAttr(p.title || '')}" onclick="openProductModal('${escAttr(productId)}')">${escHtml(p.title || 'Unknown Product')}</div>
-        <div class="bw-product-price">${escHtml(price)}${oldPriceHtml}</div>
+        <div class="bw-product-price">${escHtml(price)}${oldPriceHtml}${discountHtml}</div>
+        ${dealQualityHtml}
+        ${budgetHeadroomHtml}
         <div class="bw-product-rating">${p.rating ? `⭐ ${p.rating}` : ''}${p.reviews ? ` (${p.reviews.toLocaleString('en-IN')} reviews)` : ''}</div>
         ${scoreBadge}
         ${savingsHtml}
         ${renderVisualPricePosition(p, false)}
+        ${crossMerchantHtml}
         <div class="bw-product-actions">
           ${p.product_link
             ? `<a href="${escAttr(p.product_link)}" target="_blank" rel="noopener" class="bw-btn bw-btn-primary bw-btn-sm">View ↗</a>`

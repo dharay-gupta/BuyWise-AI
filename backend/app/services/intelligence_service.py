@@ -9,6 +9,8 @@ from app.intelligence.merchant_analysis import analyze_merchants
 from app.intelligence.market_insight import generate_market_insights
 from app.intelligence.explainer import explain_recommendation
 from app.intelligence.strengths_weaknesses import analyze_strengths_weaknesses
+from app.intelligence.deal_analysis import analyze_deal
+from app.intelligence.cross_merchant import build_cross_merchant_map
 import logging
 
 logger = logging.getLogger(__name__)
@@ -82,6 +84,16 @@ def process_intelligent_search(query: str, mode: str = "balanced") -> Intelligen
 
         # Market savings text
         product.market_savings = generate_savings_text(product, market)
+
+        # Deal analysis (Phase 5.3)
+        product.deal_info = analyze_deal(product, market, intent)
+
+    # 5.5 Cross-merchant intelligence (Phase 5.3)
+    cross_merchant_map = build_cross_merchant_map(enhanced_products)
+    for product in enhanced_products:
+        pid = product.product_id
+        if pid and pid in cross_merchant_map:
+            product.cross_merchant = cross_merchant_map[pid]
 
     # 6. Recommendations — pass intent so budget filtering applies
     recommendations = generate_recommendations(enhanced_products, market, intent)

@@ -56,6 +56,32 @@ class ScoreBreakdown(BaseModel):
     market_position_max: float = 0.0
 
 
+class DealInfo(BaseModel):
+    """Deal quality analysis based on observed merchant pricing."""
+    discount_pct: Optional[float] = None
+    deal_quality: Optional[str] = None  # "strong", "moderate", "minimal"
+    budget_headroom: Optional[str] = None
+    budget_utilisation_pct: Optional[float] = None
+
+
+class MerchantOffer(BaseModel):
+    """A single merchant's observed offer for a product."""
+    merchant: str
+    price: float
+    is_lowest: bool = False
+
+
+class CrossMerchantInfo(BaseModel):
+    """Cross-merchant comparison for the same product_id."""
+    merchant_count: int = 1
+    lowest_price: Optional[float] = None
+    highest_price: Optional[float] = None
+    best_merchant: Optional[str] = None
+    price_spread: Optional[float] = None
+    savings_vs_highest: Optional[str] = None
+    merchants: List[MerchantOffer] = []
+
+
 class EnhancedProduct(NormalizedProduct):
     buywise_score: Optional[float] = None
     price_percentile: Optional[float] = None
@@ -67,6 +93,8 @@ class EnhancedProduct(NormalizedProduct):
     market_savings: Optional[str] = None
     recommendation_explanation: Optional[RecommendationExplanation] = None
     analysis: Optional[ProductAnalysis] = None
+    deal_info: Optional[DealInfo] = None
+    cross_merchant: Optional[CrossMerchantInfo] = None
 
 
 class Recommendation(BaseModel):
