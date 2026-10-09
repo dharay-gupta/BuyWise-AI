@@ -66,8 +66,18 @@
           </button>
         </div>
 
+        <!-- View Switcher (Phase 6.3) -->
+        <div class="bw-view-switcher" style="margin-top: 1.5rem; display: flex; justify-content: center; gap: 0.5rem;">
+          <input type="radio" class="btn-check" name="btnView" id="btnShopperView" autocomplete="off" checked onchange="switchView('shopper')">
+          <label class="bw-btn bw-btn-outline" for="btnShopperView" style="min-width: 150px; text-align: center;">🛍️ Shopper View</label>
+
+          <input type="radio" class="btn-check" name="btnView" id="btnMarketView" autocomplete="off" onchange="switchView('market')">
+          <label class="bw-btn bw-btn-outline" for="btnMarketView" style="min-width: 150px; text-align: center;">📊 Market Intelligence</label>
+        </div>
+
         <!-- Mode description -->
-        <div id="modeDescription" class="bw-api-status mt-2" style="text-align:left; padding-left:0.25rem;"></div>
+        <div id="modeDescription" class="bw-api-status mt-3" style="text-align:center;"></div>
+
       </div>
     </div>
   </section>

@@ -15,6 +15,7 @@ const state = {
   compareList:      [],   // Product IDs selected for comparison (max 3)
   currentData:      null, // Full API response object
   currentMode:      'balanced',
+  currentView:      'shopper', // 'shopper' or 'market'
   priceChartInst:   null,
   scatterChartInst: null,
 };
@@ -28,6 +29,74 @@ const MODE_META = {
   best_value:    { label: 'Best Value',    icon: '🔥', desc: 'Price 40% · Rating 30% · Review Confidence 15% · Market Position 15%' },
   quality_first: { label: 'Quality First', icon: '👑', desc: 'Rating 45% · Review Confidence 30% · Market Position 15% · Price 10%' },
 };
+
+// ============================================================
+// View Switcher (Phase 6.3)
+// ============================================================
+window.switchView = function(viewName) {
+  state.currentView = viewName;
+
+  // Highlight buttons (if not handled by browser native radio group)
+  const shopperBtn = document.getElementById('btnShopperView');
+  const marketBtn = document.getElementById('btnMarketView');
+  if (shopperBtn) shopperBtn.checked = (viewName === 'shopper');
+  if (marketBtn) marketBtn.checked = (viewName === 'market');
+
+  applyViewVisibility();
+};
+
+function applyViewVisibility() {
+  const container = document.getElementById('resultsContainer');
+  // If no search has been performed yet, just return. The empty state is already handled.
+  if (container.style.display === 'none') {
+    return;
+  }
+
+  // We determine which sections to show based on the currentView
+  const shopperSections = ['intentSection', 'picksSection', 'filtersSection', 'allResultsSection'];
+  const marketSections = ['summarySection', 'chartsSection', 'merchantSection', 'insightsSection'];
+
+  // Product Comparison is part of Shopper View, but it's conditionally visible.
+
+  if (state.currentView === 'shopper') {
+    shopperSections.forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.style.display = 'block';
+    });
+    marketSections.forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.style.display = 'none';
+    });
+
+    // Conditionally show comparison if there are items to compare
+    const cmpEl = document.getElementById('comparisonSection');
+    if (cmpEl) {
+      cmpEl.style.display = state.compareList.length > 0 ? 'block' : 'none';
+    }
+
+    // Also re-render conditional picks section visibility if needed (handled in renderPicks mostly)
+
+  } else {
+    // Market Intelligence View
+    shopperSections.forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.style.display = 'none';
+    });
+    marketSections.forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.style.display = 'block';
+    });
+
+    const cmpEl = document.getElementById('comparisonSection');
+    if (cmpEl) cmpEl.style.display = 'none';
+
+    // Re-render charts so they size correctly when becoming visible
+    if (state.allProducts && state.allProducts.length > 0) {
+      // Small timeout to allow display:block to apply and DOM layout to calculate sizing
+      setTimeout(() => renderCharts(state.allProducts), 0);
+    }
+  }
+}
 
 // ============================================================
 // DOM Ready
@@ -178,10 +247,11 @@ function showError(msg) {
   document.getElementById('productGrid').innerHTML =
     `<div class="bw-error-state" style="grid-column:1/-1">⚠️ ${escHtml(msg)}</div>`;
   // Hide optional sections
-  ['intentSection','picksSection','filtersSection','comparisonSection','insightsSection','merchantSection','chartsSection'].forEach(id => {
+    ['intentSection','picksSection','filtersSection','comparisonSection','insightsSection','merchantSection','chartsSection','summarySection'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.style.display = 'none';
   });
+    document.getElementById('allResultsSection').style.display = 'block';
 }
 
 function showEmpty(query) {
@@ -193,7 +263,7 @@ function showEmpty(query) {
        <div>No products found for <strong>${escHtml(query)}</strong></div>
        <div style="font-size:0.82rem;color:var(--text-muted);margin-top:0.5rem;">Try a broader search term or different budget range.</div>
      </div>`;
-  ['intentSection','picksSection','filtersSection','comparisonSection','insightsSection','merchantSection','chartsSection'].forEach(id => {
+    ['intentSection','picksSection','filtersSection','comparisonSection','insightsSection','merchantSection','chartsSection','summarySection'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.style.display = 'none';
   });
@@ -211,7 +281,9 @@ function renderAll(data) {
   renderMerchants(data.merchant_stats);
   renderCharts(data.products);
   renderProductGrid(state.filteredProducts);
+  applyViewVisibility();
 }
+
 
 // ============================================================
 // 1. Summary Cards
@@ -295,7 +367,7 @@ function renderSummary(data) {
     </div>
     <div class="bw-stat-row">
       <span class="bw-stat-label">Products with Price Data</span>
-      <span class="bw-stat-value">${market.valid_prices_count || 0} / ${market.products_analyzed || 0}</span>
+      <span class="bw-stat-value">${market.valid_prices_count || 0} / ${market.products_analyzed || 0} (${Math.round((market.valid_prices_count || 0) / (market.products_analyzed || 1) * 100)}%)</span>
     </div>
     ${confidenceHtml}
   `;
@@ -862,6 +934,9 @@ function renderMerchants(merchantStats) {
   const fmt = (v) => v != null ? `₹${Number(v).toLocaleString('en-IN', {maximumFractionDigits: 0})}` : 'N/A';
 
   let html = `
+    <div style="margin-bottom:1rem;font-size:0.9rem;">
+      <strong>Distinct Observed Merchants:</strong> ${merchants.length}
+    </div>
     <table class="bw-merchant-table">
       <thead>
         <tr>
@@ -1136,30 +1211,30 @@ function escAttr(str) {
 function renderIntent(intent) {
   const section = document.getElementById('intentSection');
   const content = document.getElementById('intentContent');
-  
+
   if (!intent) {
     section.style.display = 'none';
     return;
   }
-  
+
   section.style.display = 'block';
-  
+
   const bMin = intent.budget_min ? `₹${intent.budget_min.toLocaleString('en-IN')}` : null;
   const bMax = intent.budget_max ? `₹${intent.budget_max.toLocaleString('en-IN')}` : null;
   let budgetStr = 'Not detected';
   if (bMin && bMax) budgetStr = `${bMin} - ${bMax}`;
   else if (bMin) budgetStr = `Above ${bMin}`;
   else if (bMax) budgetStr = `Under ${bMax}`;
-  
+
   const categoryStr = intent.category ? intent.category : 'Not detected';
-  
+
   let useCasesHtml = 'Not detected';
   if (intent.use_case_signals && intent.use_case_signals.length > 0) {
     useCasesHtml = intent.use_case_signals.map(uc => `<span class="badge">${uc}</span>`).join('');
   }
-  
+
   const priorityStr = intent.priority ? intent.priority.replace('_', ' ') : 'Not detected';
-  
+
   content.innerHTML = `
     <div class="bw-intent-item">
       <span class="bw-intent-label">Original Query</span>
@@ -1192,23 +1267,23 @@ function renderVisualPricePosition(p, isModal) {
   let pct = p.price_percentile;
   if (pct < 0) pct = 0;
   if (pct > 100) pct = 100;
-  
+
   let label = 'Near Median';
   if (pct <= 33) label = 'Below Median';
   else if (pct >= 67) label = 'Above Median';
 
-  const sizeStyles = isModal 
+  const sizeStyles = isModal
     ? 'height: 6px; margin: 0.5rem 0; width: 100%;'
     : 'height: 4px; margin: 0.35rem 0; width: 100%;';
-    
+
   const fontStyles = isModal
     ? 'font-size: 0.75rem;'
     : 'font-size: 0.7rem;';
-  
+
   const markerTop = isModal ? '-4px' : '-2px';
   const markerBottom = isModal ? '-4px' : '-2px';
   const markerWidth = isModal ? '4px' : '3px';
-  
+
   return `
     <div style="margin-top:0.75rem; margin-bottom:0.75rem;">
       <div style="display:flex; justify-content:space-between; ${fontStyles} color:var(--text-muted); margin-bottom:4px;">

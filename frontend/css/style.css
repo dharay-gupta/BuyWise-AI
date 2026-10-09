@@ -1419,3 +1419,5 @@ h1, h2, h3, h4, h5, h6 {
   line-height: 1.45;
   padding-left: 0.2rem;
 }
+
+.btn-check:checked + .bw-btn-outline { background: var(--gradient-accent); color: white; border-color: transparent; }

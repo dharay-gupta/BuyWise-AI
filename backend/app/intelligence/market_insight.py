@@ -113,4 +113,18 @@ def generate_market_insights(
             f"did not include price data and were excluded from price analysis."
         )
 
+    # -----------------------------------------------------------------------
+    # Cross-merchant deals observation
+    # -----------------------------------------------------------------------
+    cross_merchant_products = [
+        p for p in products
+        if p.cross_merchant and p.cross_merchant.merchant_count > 1
+    ]
+    if cross_merchant_products:
+        count = len(cross_merchant_products)
+        insights.append(
+            f"We found {count} product{'s' if count > 1 else ''} offered by multiple "
+            f"observed merchants, allowing for direct price comparison."
+        )
+
     return insights
