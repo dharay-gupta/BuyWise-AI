@@ -12,6 +12,7 @@ from app.intelligence.strengths_weaknesses import analyze_strengths_weaknesses
 from app.intelligence.deal_analysis import analyze_deal
 from app.intelligence.cross_merchant import build_cross_merchant_map
 from app.intelligence.market_confidence import calculate_market_confidence
+from app.intelligence.category_detector import detect_category  # Phase 6.4
 import logging
 
 logger = logging.getLogger(__name__)
@@ -22,8 +23,9 @@ def process_intelligent_search(query: str, mode: str = "balanced") -> Intelligen
     Orchestrates the entire BuyWise intelligence pipeline.
 
     Pipeline:
-        search_service → intent_parser → market_analysis → scoring →
-        recommendations → tradeoffs → merchant_analysis → market_insights
+        search_service -> intent_parser -> category_detector -> market_analysis
+        -> scoring -> recommendations -> tradeoffs -> merchant_analysis
+        -> market_insights
 
     Args:
         query: User search query (natural language)
@@ -45,7 +47,7 @@ def process_intelligent_search(query: str, mode: str = "balanced") -> Intelligen
     # priority qualifiers, leaving just the core product terms.
     fallback_query = intent.product_query.strip() if intent.product_query else ""
 
-    # 2. Search — with a single fallback if the initial result is sparse.
+    # 2. Search - with a single fallback if the initial result is sparse.
     search_response, fallback_used = perform_commerce_search_with_fallback(
         original_query=query,
         fallback_query=fallback_query,
@@ -64,19 +66,25 @@ def process_intelligent_search(query: str, mode: str = "balanced") -> Intelligen
             search_used_fallback=fallback_used if fallback_used else None,
         )
 
-    # Convert NormalizedProduct → EnhancedProduct
+    # Convert NormalizedProduct -> EnhancedProduct
     enhanced_products = [EnhancedProduct(**p.model_dump()) for p in products]
 
-    # 3. Market Analysis (only on valid observed data)
+    # 3. Category Detection (Phase 6.4)
+    #    Use product titles as secondary evidence to help classify generic queries.
+    product_titles = [p.title for p in enhanced_products if p.title]
+    detected_category = detect_category(query, intent, product_titles)
+    logger.debug("Category detected: %s for query: %r", detected_category, query)
+
+    # 3.5 Market Analysis (only on valid observed data)
     market = analyze_market(enhanced_products)
 
-    # 3.5 Market Evidence Confidence (Phase 6.1)
+    # 3.6 Market Evidence Confidence (Phase 6.1)
     confidence = calculate_market_confidence(enhanced_products, market)
     market.confidence = confidence
 
-    # 4. Scoring — uses intent.priority (= mode)
+    # 4. Scoring - uses intent.priority (= mode) + detected_category (Phase 6.4)
     for product in enhanced_products:
-        score_product(product, market, intent)
+        score_product(product, market, intent, detected_category)
 
     # 5. Per-product insights, tradeoffs, and savings text
     for product in enhanced_products:
@@ -114,8 +122,11 @@ def process_intelligent_search(query: str, mode: str = "balanced") -> Intelligen
         if pid and pid in cross_merchant_map:
             product.cross_merchant = cross_merchant_map[pid]
 
-    # 6. Recommendations — pass intent so budget filtering applies
-    recommendations = generate_recommendations(enhanced_products, market, intent)
+    # 6. Recommendations - pass intent so budget filtering applies
+    #    Also pass detected_category for category context (Phase 6.4)
+    recommendations = generate_recommendations(
+        enhanced_products, market, intent, detected_category
+    )
 
     # 6.5 Add explanations and strengths/weaknesses
     recommended_ids = {}

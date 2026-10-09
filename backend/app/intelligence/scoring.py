@@ -92,16 +92,104 @@ def _get_base_weights(priority: str) -> Dict[str, float]:
     return DECISION_MODE_WEIGHTS.get(priority, DECISION_MODE_WEIGHTS["balanced"])
 
 
+# ---------------------------------------------------------------------------
+# Category-aware weight adjustment (Phase 6.4 - Feature B)
+# ---------------------------------------------------------------------------
+
+# Categories where rating+review evidence is especially diagnostic.
+# Adjustment: shift weight slightly toward rating quality.
+_RATING_EMPHASIS_CATEGORIES = {
+    "audio_accessories",      # rating matters greatly for headphones/speakers
+    "beauty_personal_care",   # user-reported satisfaction is primary signal
+    "sports_fitness",         # product quality highly reviewer-dependent
+}
+
+# Categories where price is especially salient for purchase decisions.
+# Adjustment: shift weight slightly toward price / market_position.
+_PRICE_EMPHASIS_CATEGORIES = {
+    "clothing",   # price is a primary filter for most shoppers
+    "footwear",   # competitive market; price is highly salient
+}
+
+# Adjustment magnitudes: deliberately conservative (<=0.05 each)
+# so the category never dominates the chosen decision mode.
+_RATING_SHIFT = 0.05    # move from price -> rating
+_PRICE_SHIFT = 0.05     # move from rating -> price
+
+
+def _apply_category_weight_adjustment(
+    base_weights: Dict[str, float],
+    detected_category: Optional[str],
+    mode: str,
+) -> tuple:
+    """
+    Returns an adjusted weight dict (copy) and a human-readable note explaining
+    the adjustment.  Returns the original weights and None when no adjustment
+    is applicable or desirable.
+
+    Rules:
+    - No adjustment in 'cheapest' mode (price already dominates).
+    - No adjustment in 'quality_first' mode (rating already dominates).
+    - Adjustments are capped so weights stay in (0, 1) and still sum to 1.0.
+    - Missing data (detected_category is None or 'other') -> no adjustment.
+    - The returned dict always sums to 1.0 within floating-point precision.
+    """
+    if detected_category is None or detected_category == "other":
+        return base_weights, None
+    if mode in ("cheapest", "quality_first"):
+        # Those modes already emphasise the relevant dimension heavily.
+        return base_weights, None
+
+    weights = dict(base_weights)  # shallow copy - values are floats
+    note = None
+
+    if detected_category in _RATING_EMPHASIS_CATEGORIES:
+        # Shift _RATING_SHIFT from price -> rating (clamped)
+        shift = min(_RATING_SHIFT, weights["price"] - 0.01)
+        if shift > 0:
+            weights["price"] -= shift
+            weights["rating"] += shift
+            note = (
+                "For {} searches, rating evidence receives a small additional "
+                "weighting ({:.0f}pp transferred from price).".format(
+                    detected_category.replace("_", " "), shift * 100
+                )
+            )
+
+    elif detected_category in _PRICE_EMPHASIS_CATEGORIES:
+        # Shift _PRICE_SHIFT from rating -> price (clamped)
+        shift = min(_PRICE_SHIFT, weights["rating"] - 0.01)
+        if shift > 0:
+            weights["rating"] -= shift
+            weights["price"] += shift
+            note = (
+                "For {} searches, price competitiveness receives a small "
+                "additional weighting ({:.0f}pp transferred from rating).".format(
+                    detected_category.replace("_", " "), shift * 100
+                )
+            )
+
+    # Verify sum is still 1.0 (floating-point guard)
+    total = sum(weights.values())
+    if abs(total - 1.0) > 1e-9:
+        # Rebalance the largest component to absorb any drift
+        largest = max(weights, key=lambda k: weights[k])
+        weights[largest] += 1.0 - total
+
+    return weights, note
+
+
 def score_product(
     product: EnhancedProduct,
     market: MarketStats,
     intent: SearchIntent,
+    detected_category: Optional[str] = None,
 ) -> EnhancedProduct:
     """
     Calculates the deterministic BuyWise Score and populates ScoreBreakdown.
 
     Design rules:
-    - Missing data gives 0 for that component — products without ratings or prices
+    - Missing data gives 0 for that component - products without ratings or prices
       cannot score artificially high.
     - If *no* meaningful data is available at all (no price, no rating, no reviews),
       buywise_score is left as None so downstream code can distinguish "unscored"
@@ -109,8 +197,14 @@ def score_product(
     - The final score is calculated exactly once and clamped to [0, 100].
     - price_percentile and review_confidence are populated on the product object.
     - ScoreBreakdown includes *_max fields so the UI can display "X / max".
+    - Category-aware weight adjustment applied when detected_category is provided
+      and falls into a known emphasis group (Phase 6.4).
     """
-    weights = _get_base_weights(intent.priority)
+    base_weights = _get_base_weights(intent.priority)
+    weights, _category_note = _apply_category_weight_adjustment(
+        base_weights, detected_category, intent.priority
+    )
+
     components: Dict[str, float] = {
         "price": 0.0,
         "rating": 0.0,
@@ -169,7 +263,7 @@ def score_product(
         product.review_confidence = 0.0
 
     # ------------------------------------------------------------------
-    # 4. Final BuyWise Score — computed exactly once
+    # 4. Final BuyWise Score - computed exactly once
     # ------------------------------------------------------------------
     if not has_data:
         # No usable signals: leave score as None to distinguish from a scored 0
