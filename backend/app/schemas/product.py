@@ -1,5 +1,6 @@
-from pydantic import BaseModel, HttpUrl
+from pydantic import BaseModel
 from typing import Optional, List
+
 
 class NormalizedProduct(BaseModel):
     title: Optional[str] = None
@@ -20,6 +21,18 @@ class NormalizedProduct(BaseModel):
     snippet: Optional[str] = None
     tag: Optional[str] = None
     badge: Optional[str] = None
+
+    # --- Offer Intelligence fields (Phase 6.2) ---
+    # Shipping text verbatim from the SerpApi result (e.g. "Free shipping",
+    # "Delivery by Thu", "+₹49 shipping").  None when absent from source data.
+    shipping_info: Optional[str] = None
+    # True ONLY when the source data explicitly states free shipping.
+    # Never inferred from a missing shipping fee.
+    free_shipping: Optional[bool] = None
+    # Special-offer text verbatim from the SerpApi result (e.g. "10% off with
+    # HDFC card").  None when absent from source data.
+    offer_text: Optional[str] = None
+
 
 class SearchResponse(BaseModel):
     query: str

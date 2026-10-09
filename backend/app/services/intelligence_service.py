@@ -1,4 +1,4 @@
-from app.services.search_service import perform_commerce_search
+from app.services.search_service import perform_commerce_search_with_fallback
 from app.schemas.intelligence import IntelligenceResponse, EnhancedProduct
 from app.intelligence.intent_parser import parse_intent
 from app.intelligence.market_analysis import analyze_market
@@ -30,8 +30,26 @@ def process_intelligent_search(query: str, mode: str = "balanced") -> Intelligen
         mode:  Decision mode (balanced | cheapest | best_value | quality_first)
                Controls scoring weights. Validated at the route layer.
     """
-    # 1. Basic search (Phase 2)
-    search_response = perform_commerce_search(query)
+    # 1. Parse intent FIRST so we have a clean product query for the
+    #    potential fallback search.  Budget / currency / location from the
+    #    original query are preserved in `intent` throughout.
+    intent = parse_intent(query)
+
+    # Override intent.priority with the explicit mode when provided so that
+    # the user-selected decision mode always takes precedence over what the
+    # natural-language parser infers.
+    intent.priority = mode
+
+    # Build the fallback query from the parsed intent's clean product query.
+    # The intent parser already strips budget phrases (e.g. "under 5000") and
+    # priority qualifiers, leaving just the core product terms.
+    fallback_query = intent.product_query.strip() if intent.product_query else ""
+
+    # 2. Search — with a single fallback if the initial result is sparse.
+    search_response, fallback_used = perform_commerce_search_with_fallback(
+        original_query=query,
+        fallback_query=fallback_query,
+    )
     products = search_response.products
 
     if not products:
@@ -40,20 +58,14 @@ def process_intelligent_search(query: str, mode: str = "balanced") -> Intelligen
             query=query,
             count=0,
             decision_mode=mode,
+            intent=intent,
             products=[],
             confidence=empty_conf,
+            search_used_fallback=fallback_used if fallback_used else None,
         )
 
     # Convert NormalizedProduct → EnhancedProduct
     enhanced_products = [EnhancedProduct(**p.model_dump()) for p in products]
-
-    # 2. Intent Parsing
-    intent = parse_intent(query)
-
-    # Override intent.priority with the explicit mode when provided so that
-    # the user-selected decision mode always takes precedence over what the
-    # natural-language parser infers.
-    intent.priority = mode
 
     # 3. Market Analysis (only on valid observed data)
     market = analyze_market(enhanced_products)
@@ -147,4 +159,5 @@ def process_intelligent_search(query: str, mode: str = "balanced") -> Intelligen
         merchant_stats=merchant_stats,
         market_insights=market_insights,
         confidence=confidence,
+        search_used_fallback=fallback_used if fallback_used else None,
     )

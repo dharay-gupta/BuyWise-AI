@@ -633,6 +633,31 @@ function openProductModal(productId) {
     ? `<div style="font-size:0.8rem;color:var(--text-muted);margin-top:0.5rem;">🚚 <strong>Merchant Delivery Info:</strong> ${escHtml(p.delivery)} <span style="font-size:0.7rem;color:var(--text-muted);">(merchant-provided; subject to seller terms)</span></div>`
     : '';
 
+  // Offer Intelligence (Phase 6.2) — only display when source data provides it
+  let offerIntelHtml = '';
+  const hasShipping = p.shipping_info && typeof p.shipping_info === 'string' && p.shipping_info.trim();
+  const hasFreeShipping = p.free_shipping === true;
+  const hasOffer = p.offer_text && typeof p.offer_text === 'string' && p.offer_text.trim();
+
+  if (hasShipping || hasFreeShipping || hasOffer) {
+    let offerParts = '';
+    // Free shipping badge — only shown when explicitly supported by source data
+    if (hasFreeShipping) {
+      offerParts += `<div style="display:inline-flex;align-items:center;gap:0.35rem;background:rgba(56,161,105,0.12);border:1px solid rgba(56,161,105,0.35);border-radius:4px;padding:0.2rem 0.55rem;font-size:0.78rem;color:var(--accent-success);margin-bottom:0.35rem;">🚚 Free Shipping</div> `;
+    }
+    // Shipping information text (neutral label when not explicitly free)
+    if (hasShipping && !hasFreeShipping) {
+      offerParts += `<div style="font-size:0.8rem;color:var(--text-muted);margin-bottom:0.3rem;">📦 <strong>Shipping information:</strong> ${escHtml(p.shipping_info)}</div>`;
+    }
+    // Merchant offer text
+    if (hasOffer) {
+      offerParts += `<div style="font-size:0.8rem;color:var(--text-secondary);margin-bottom:0.3rem;">🏷️ <strong>Merchant offer:</strong> ${escHtml(p.offer_text)}</div>`;
+    }
+    if (offerParts) {
+      offerIntelHtml = `<div class="bw-offer-intel" style="margin-top:0.5rem;padding:0.5rem 0.65rem;background:var(--bg-surface);border-radius:var(--radius-sm);border-left:2px solid var(--accent-primary);">${offerParts}</div>`;
+    }
+  }
+
   // Score badge
   const scoreBadge = score
     ? `<span class="bw-score-badge ${scoreClass}" title="BuyWise Score">🎯 BuyWise Score: ${score}/100</span>`
@@ -758,6 +783,7 @@ function openProductModal(productId) {
         ${p.reviews ? `(${p.reviews.toLocaleString('en-IN')} observed reviews)` : ''}
       </div>
       ${deliveryHtml}
+      ${offerIntelHtml}
     </div>
 
     <!-- Section 2: Cross-Merchant Intelligence (if available) -->
@@ -1043,6 +1069,17 @@ function generateProductCard(p) {
     crossMerchantHtml = `<div class="bw-cross-merchant-card-hint" title="Observed at multiple merchants">🏪 Also seen at ${p.cross_merchant.merchant_count} stores (from ₹${Number(p.cross_merchant.lowest_price).toLocaleString('en-IN', {maximumFractionDigits: 0})})</div>`;
   }
 
+  // Offer Intelligence compact pill (Phase 6.2) — only shown when source data provides it
+  let cardOfferHtml = '';
+  if (p.free_shipping === true) {
+    cardOfferHtml = `<div style="font-size:0.72rem;color:var(--accent-success);margin-top:0.25rem;">🚚 Free Shipping</div>`;
+  } else if (p.shipping_info && typeof p.shipping_info === 'string' && p.shipping_info.trim()) {
+    cardOfferHtml = `<div style="font-size:0.72rem;color:var(--text-muted);margin-top:0.25rem;" title="${escAttr(p.shipping_info)}">📦 ${escHtml(p.shipping_info.length > 35 ? p.shipping_info.substring(0, 35) + '…' : p.shipping_info)}</div>`;
+  }
+  if (p.offer_text && typeof p.offer_text === 'string' && p.offer_text.trim()) {
+    cardOfferHtml += `<div style="font-size:0.72rem;color:var(--text-secondary);margin-top:0.15rem;" title="${escAttr(p.offer_text)}">🏷️ ${escHtml(p.offer_text.length > 35 ? p.offer_text.substring(0, 35) + '…' : p.offer_text)}</div>`;
+  }
+
   return `
     <div class="bw-product-card${inCompare ? ' in-compare' : ''}" data-pid="${escAttr(productId)}">
       <div class="bw-product-img">${imgHtml}</div>
@@ -1058,6 +1095,7 @@ function generateProductCard(p) {
         ${savingsHtml}
         ${renderVisualPricePosition(p, false)}
         ${crossMerchantHtml}
+        ${cardOfferHtml}
         <div class="bw-product-actions">
           ${p.product_link
             ? `<a href="${escAttr(p.product_link)}" target="_blank" rel="noopener" class="bw-btn bw-btn-primary bw-btn-sm">View ↗</a>`
@@ -1071,6 +1109,7 @@ function generateProductCard(p) {
     </div>
   `;
 }
+
 
 // ============================================================
 // Security Helpers — prevent XSS

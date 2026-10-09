@@ -155,3 +155,6 @@ class IntelligenceResponse(BaseModel):
     merchant_stats: Optional[MerchantStats] = None
     market_insights: List[str] = []
     confidence: Optional[MarketConfidence] = None
+    # Diagnostic: True when a fallback search was used to supplement sparse
+    # initial results.  None/False when the first search was sufficient.
+    search_used_fallback: Optional[bool] = None
