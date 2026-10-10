@@ -345,7 +345,7 @@ powershell
 
 ### Current Test Status
 
-**Latest verified result: 186 passed, 0 failed, 1 warning in 1.57 seconds.**
+**Latest verified result: 186 passed, 0 failed, 1 warning.**
 
 The automated test suite uses mocked data structures to avoid consuming SerpApi quota during testing.
 
@@ -368,17 +368,19 @@ BuyWise-AI/
 │   │   ├── config.py                  # Pydantic Settings configuration loader
 │   │   ├── main.py                    # FastAPI application, CORS middleware, route registration
 │   │   ├── intelligence/              # BuyWise Intelligence Core
+│   │   │   ├── category_detector.py   # Product category detection from query and title signals
 │   │   │   ├── cross_merchant.py      # Cross-merchant offer grouping and spread calculations
 │   │   │   ├── deal_analysis.py       # Discount calculation and deal quality classification
 │   │   │   ├── explainer.py           # Recommendation rationale factor generator
 │   │   │   ├── intent_parser.py       # Natural language regex budget and intent extraction
 │   │   │   ├── market_analysis.py     # Median, spread, and price distribution statistics
+│   │   │   ├── market_confidence.py   # Market confidence scoring based on result volume
 │   │   │   ├── market_insight.py      # Natural language market insights
 │   │   │   ├── merchant_analysis.py   # Observed marketplace distribution aggregator
 │   │   │   ├── normalization.py       # SerpApi raw shopping results normalizer
 │   │   │   ├── recommendations.py     # Top picks selector across 6 categories
 │   │   │   ├── scoring.py             # Deterministic BuyWise score calculation (4 modes)
-│   │   │   ├── strengths_weaknesses.py# Product-level pros and cons analyzer
+│   │   │   ├── strengths_weaknesses.py # Product-level pros and cons analyzer
 │   │   │   └── tradeoffs.py           # Market trade-off and savings text generator
 │   │   ├── routes/
 │   │   │   ├── health.py              # Health check endpoint
@@ -387,7 +389,7 @@ BuyWise-AI/
 │   │   │   ├── intelligence.py        # Pydantic models for intelligence responses
 │   │   │   └── product.py             # Normalized product and search schemas
 │   │   └── services/
-│   │       ├── intelligence_service.py# Master pipeline orchestrator
+│   │       ├── intelligence_service.py # Master pipeline orchestrator
 │   │       ├── search_service.py      # Search coordinator
 │   │       └── serpapi_client.py      # Official SerpApi Google Shopping client
 │   └── tests/                         # Automated test suite (186 tests in the latest verified run)
