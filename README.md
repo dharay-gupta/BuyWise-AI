@@ -139,7 +139,7 @@ Copy-Item .env.example backend\.env
 
 Open `backend/.env` in an editor and set your SerpApi API key:
 ```env
-SERPAPI_API_KEY=your_actual_serpapi_key_here
+SERPAPI_API_KEY=your_serpapi_key_here
 ENVIRONMENT=development
 DATABASE_URL=sqlite:///../data/buywise.db
 ```
