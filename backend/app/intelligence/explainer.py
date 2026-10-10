@@ -185,34 +185,34 @@ def explain_recommendation(
     # Summary — per recommendation category
     # ------------------------------------------------------------------
     category_summaries = {
-        "best_overall": (
-            "BuyWise recommends this as Best Overall because it offers the "
-            "strongest balance of price, rating, and review confidence among "
-            "observed results."
-        ),
-        "best_value": (
-            "BuyWise recommends this as Best Value because its observed price "
-            "is below the market median while maintaining a solid rating and "
-            "review evidence."
-        ),
-        "cheapest": (
-            "BuyWise recommends this as the Cheapest option because it has "
-            "the lowest valid price among observed results."
-        ),
-        "highest_rated": (
-            "BuyWise recommends this as Highest Rated because it has the best "
-            "combination of rating and review count among observed results."
-        ),
-        "premium_pick": (
-            "BuyWise recommends this as a Premium Pick because it offers high "
-            "ratings despite being priced above the market median."
-        ),
-        "hidden_gem": (
-            "BuyWise recommends this as a Hidden Gem because it maintains a "
-            "high rating despite having fewer observed reviews. "
-            "Review evidence is limited — treat this recommendation with caution."
-        ),
-    }
+    "best_overall": (
+        "BuyWise recommends this as Best Overall because it offers the "
+        "strongest balance of price, rating, and review confidence among "
+        "observed results."
+    ),
+    "best_value": (
+        "BuyWise recommends this as Best Value because its observed price "
+        "is below the market median while maintaining a solid rating and "
+        "review evidence."
+    ),
+    "cheapest": (
+        "BuyWise recommends this as the Cheapest option because it has "
+        "the lowest valid price among observed results."
+    ),
+    "highest_rated": (
+        "BuyWise recommends this as Highest Rated because it has the best "
+        "combination of rating and review count among observed results."
+    ),
+    "premium_pick": (
+        "BuyWise recommends this as a Premium Pick because it offers high "
+        "ratings despite being priced above the market median."
+    ),
+    "hidden_gem": (
+        "BuyWise recommends this as a Hidden Gem because it maintains a "
+        "high rating despite having fewer observed reviews. "
+        "Review evidence is limited — treat this recommendation with caution."
+    ),
+}
 
     summary = category_summaries.get(
         recommendation_category,

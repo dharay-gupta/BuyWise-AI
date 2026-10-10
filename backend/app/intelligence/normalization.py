@@ -10,6 +10,38 @@ _FREE_SHIPPING_PHRASES = (
     "ships free",
 )
 
+# ---------------------------------------------------------------------------
+# SerpApi Google Shopping result shapes
+# ---------------------------------------------------------------------------
+# Shape A – single-source products: contain top-level `product_link`, `price`,
+#   `extracted_price`, `source`, etc.
+# Shape B – aggregated products: `multiple_sources` is set to the boolean True
+#   (a flag, not a list of sellers).  These items only carry `title`,
+#   `product_id`, `thumbnail`, `rating`, `reviews`, and `position`.  The keys
+#   `product_link`, `price`, `extracted_price`, `source`,
+#   `serpapi_product_api`, and `serpapi_immersive_product_api` are absent.
+#   There is no embedded seller data to recover from; `None` is the correct
+#   value for those fields.  Note: some Shape-A items also carry
+#   `multiple_sources: True` when Google aggregates sellers but still surfaces
+#   a representative price and link at the top level — so `multiple_sources`
+#   alone cannot be used to classify an item as Shape B.
+# ---------------------------------------------------------------------------
+
+
+def _resolve_product_link(item: dict) -> str | None:
+    """Return the best available product URL from a SerpApi shopping item.
+
+    Checks ``product_link`` first, then ``link``.  Uses explicit ``None``
+    comparison (not ``or``-chaining) so that a genuinely empty string value on
+    the primary key does not accidentally shadow a valid URL stored under the
+    alternate key.  Returns ``None`` when neither key holds a non-empty string.
+    """
+    for key in ("product_link", "link"):
+        val = item.get(key)
+        if val is not None and isinstance(val, str) and val.strip():
+            return val.strip()
+    return None
+
 
 def _extract_free_shipping(shipping_text: str) -> bool | None:
     """
@@ -61,8 +93,12 @@ def normalize_shopping_results(raw_results: list) -> list[NormalizedProduct]:
         # Safely extract basic strings
         title = item.get("title", "").strip() if item.get("title") else None
 
-        # In some SerpApi results, 'link' is provided instead of 'product_link'
-        product_link = item.get("product_link") or item.get("link")
+        # Resolve the product URL using an explicit-None check so that an
+        # empty string on the primary key does not shadow a valid alternate key.
+        # For Shape-B (multiple_sources=True, no top-level link/price/source)
+        # this correctly returns None — there is no URL to recover without an
+        # extra SerpApi request.
+        product_link = _resolve_product_link(item)
 
         # ----------------------------------------------------------------
         # Offer Intelligence (Phase 6.2)

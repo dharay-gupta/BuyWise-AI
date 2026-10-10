@@ -51,6 +51,11 @@ function applyViewVisibility() {
   if (container.style.display === 'none') {
     return;
   }
+  
+  // If in error or empty state (no products loaded), do not toggle visibility of stale sections
+  if (!state.allProducts || state.allProducts.length === 0) {
+    return;
+  }
 
   // We determine which sections to show based on the currentView
   const shopperSections = ['intentSection', 'picksSection', 'filtersSection', 'allResultsSection'];
@@ -183,8 +188,11 @@ async function performSearch() {
   const mode = document.getElementById('modeSelect').value;
   state.currentMode = mode;
 
-  // Reset compare list when new search
+  // Reset state when new search begins to avoid stale data on error
   state.compareList = [];
+  state.allProducts = [];
+  state.filteredProducts = [];
+  state.currentData = null;
 
   showLoading('Analysing current observed market...');
 
@@ -422,7 +430,6 @@ function renderPicks(data) {
           <div class="bw-pick-price">${escHtml(price)}${discountBadge}</div>
           <div class="bw-pick-score">BuyWise Score: ${score}/100</div>
           <div class="bw-pick-reason">
-            <strong>Why BuyWise Recommends:</strong><br>
             ${p.recommendation_explanation ? escHtml(p.recommendation_explanation.summary) : escHtml(rec.reason)}
           </div>
           <div class="bw-pick-actions">
@@ -521,9 +528,9 @@ function toggleCompare(productId) {
 }
 
 function updateCompareButtons() {
-  // Update all compare buttons across picks and grid
+  // Update all compare buttons across picks and grid and modal
   document.querySelectorAll('[id^="cmp-"]').forEach(btn => {
-    const pid = btn.id.replace(/^cmp-pick-|^cmp-card-/, '');
+    const pid = btn.id.replace(/^cmp-pick-|^cmp-card-|^cmp-modal-/, '');
     const inList = state.compareList.includes(pid);
     btn.textContent = inList ? '✓ Remove' : '+ Compare';
     btn.classList.toggle('active', inList);
@@ -767,18 +774,20 @@ function openProductModal(productId) {
         <div style="font-size:0.8rem;color:var(--text-secondary);margin-bottom:0.5rem;">
           Observed across <strong>${cm.merchant_count} merchants</strong> for this product. Lowest offer at <strong>${escHtml(cm.best_merchant || 'observed store')}</strong>.
         </div>
-        <table class="bw-cross-merchant-table">
-          <thead>
-            <tr>
-              <th>Merchant</th>
-              <th>Observed Price</th>
-              <th>Status</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${rowsHtml}
-          </tbody>
-        </table>
+        <div class="bw-cross-merchant-table-wrap">
+          <table class="bw-cross-merchant-table">
+            <thead>
+              <tr>
+                <th>Merchant</th>
+                <th>Observed Price</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${rowsHtml}
+            </tbody>
+          </table>
+        </div>
         <div style="font-size:0.7rem;color:var(--text-muted);margin-top:0.5rem;">
           ℹ️ Based on observed Google Shopping results in this query. Does not guarantee live stock or checkout availability.
         </div>
@@ -877,11 +886,12 @@ function openProductModal(productId) {
         ${breakdownHtml}
       </div>` : ''}
 
-    <div style="margin-top:1.5rem;display:flex;gap:0.75rem;">
+    <div style="margin-top:1.5rem;display:flex;gap:0.75rem;flex-wrap:wrap;">
       ${p.product_link
-        ? `<a href="${escAttr(p.product_link)}" target="_blank" rel="noopener" class="bw-btn bw-btn-primary">View Product ↗</a>`
-        : '<span style="color:var(--text-muted);font-size:0.82rem;">No product link available</span>'}
-      <button class="bw-btn bw-btn-outline" onclick="closeModal()">Close</button>
+        ? `<a href="${escAttr(p.product_link)}" target="_blank" rel="noopener" class="bw-btn bw-btn-primary" style="flex:1;">View Product ↗</a>`
+        : '<span style="color:var(--text-muted);font-size:0.82rem;flex:1;display:flex;align-items:center;">No link available</span>'}
+      <button class="bw-btn bw-btn-compare${state.compareList.includes(p.product_id || p.title) ? ' active' : ''}" style="flex:1;" id="cmp-modal-${escAttr(p.product_id || p.title || '')}" onclick="toggleCompare('${escAttr(p.product_id || p.title || '')}')">${state.compareList.includes(p.product_id || p.title) ? '✓ Remove' : '+ Compare'}</button>
+      <button class="bw-btn bw-btn-outline" style="flex:1;" onclick="closeModal()">Close</button>
     </div>
   `;
 

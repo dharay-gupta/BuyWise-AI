@@ -137,12 +137,12 @@ h1, h2, h3, h4, h5, h6 {
    Hero Section
    ============================================================ */
 .bw-hero {
-  padding: 4rem 0 2.5rem;
+  padding: 2.5rem 0 1.5rem;
   text-align: center;
 }
 
 .bw-hero h1 {
-  font-size: clamp(2rem, 5vw, 3.5rem);
+  font-size: clamp(1.75rem, 4vw, 2.5rem);
   font-weight: 800;
   letter-spacing: -0.04em;
   background: var(--gradient-accent);
@@ -156,7 +156,7 @@ h1, h2, h3, h4, h5, h6 {
   font-size: 1.05rem;
   color: var(--text-secondary);
   max-width: 500px;
-  margin: 0 auto 2rem;
+  margin: 0 auto 1.5rem;
   font-weight: 400;
 }
 
@@ -493,6 +493,7 @@ h1, h2, h3, h4, h5, h6 {
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
+  min-height: 2.8em;
 }
 
 .bw-pick-price {
@@ -509,11 +510,11 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .bw-pick-reason {
-  font-size: 0.78rem;
+  font-size: 0.8rem;
   color: var(--text-secondary);
-  font-style: italic;
   flex: 1;
   margin-bottom: 0.75rem;
+  line-height: 1.4;
 }
 
 .bw-pick-actions {
@@ -691,6 +692,7 @@ h1, h2, h3, h4, h5, h6 {
   -webkit-box-orient: vertical;
   overflow: hidden;
   cursor: pointer;
+  min-height: 2.8em;
 }
 
 .bw-product-title:hover {
@@ -768,6 +770,11 @@ h1, h2, h3, h4, h5, h6 {
   gap: 0.5rem;
   margin-top: auto;
   padding-top: 0.75rem;
+}
+
+.bw-product-actions .bw-btn,
+.bw-pick-actions .bw-btn {
+  flex: 1;
 }
 
 /* ============================================================
@@ -1030,6 +1037,29 @@ h1, h2, h3, h4, h5, h6 {
   padding: 1.5rem;
 }
 
+@media (min-width: 768px) {
+  .bw-modal {
+    display: flex;
+    flex-direction: row;
+    max-width: 900px;
+    align-items: stretch;
+  }
+  .bw-modal-img {
+    width: 350px;
+    height: auto;
+    border-radius: var(--radius-xl) 0 0 var(--radius-xl);
+    flex-shrink: 0;
+  }
+  .bw-modal-img img {
+    max-height: 80%;
+  }
+  .bw-modal-body {
+    flex: 1;
+    overflow-y: auto;
+    max-height: 90vh;
+  }
+}
+
 /* ============================================================
    Market Insight Section
    ============================================================ */
@@ -1176,13 +1206,9 @@ h1, h2, h3, h4, h5, h6 {
   .bw-mode-select { min-width: 100%; }
   .bw-filters-row { flex-direction: column; }
   .bw-filter-group { min-width: 100%; }
-  .bw-picks-grid { grid-template-columns: 1fr 1fr; }
-  .bw-products-grid { grid-template-columns: 1fr 1fr; }
 }
 
 @media (max-width: 480px) {
-  .bw-picks-grid { grid-template-columns: 1fr; }
-  .bw-products-grid { grid-template-columns: 1fr; }
   .bw-comparison-section { overflow-x: auto; }
 }
 /* ============================================================
@@ -1339,11 +1365,16 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 /* Cross-Merchant Table in Modal */
+.bw-cross-merchant-table-wrap {
+  width: 100%;
+  overflow-x: auto;
+}
 .bw-cross-merchant-table {
   width: 100%;
   border-collapse: collapse;
   font-size: 0.8rem;
   margin-top: 0.5rem;
+  min-width: 300px;
 }
 
 .bw-cross-merchant-table th {
@@ -1420,4 +1451,32 @@ h1, h2, h3, h4, h5, h6 {
   padding-left: 0.2rem;
 }
 
-.btn-check:checked + .bw-btn-outline { background: var(--gradient-accent); color: white; border-color: transparent; }
+.bw-view-switcher {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-glass);
+  border-radius: var(--radius-md);
+  padding: 0.35rem;
+  display: inline-flex;
+  gap: 0.25rem;
+  margin: 1.5rem auto 0;
+}
+
+.bw-view-switcher .bw-btn {
+  border: none !important;
+  color: var(--text-secondary);
+  border-radius: calc(var(--radius-md) - 0.25rem);
+  font-weight: 600;
+  background: transparent;
+  transition: all 0.2s ease;
+}
+
+.bw-view-switcher .bw-btn:hover {
+  color: var(--text-primary);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.btn-check:checked + .bw-btn {
+  background: var(--bg-card);
+  color: var(--text-primary);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+}

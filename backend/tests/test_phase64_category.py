@@ -291,9 +291,9 @@ class TestCategoryAwareScoring:
         p_no_rating.rating = None
         p_no_rating.reviews = None
         score_product(p_no_rating, market, intent, detected_category=CAT_AUDIO)
-        # Rating and review_confidence components must be 0
+        # Rating component must be neutral baseline (0.5 * adjusted_weight)
         assert p_no_rating.score_breakdown is not None
-        assert p_no_rating.score_breakdown.rating == 0.0
+        assert p_no_rating.score_breakdown.rating == 17.5
         assert p_no_rating.score_breakdown.review_confidence == 0.0
 
     def test_all_four_modes_work_with_category(self):

@@ -238,9 +238,9 @@ def test_missing_rating_graceful():
 
     # Has price data, so score should be computable (not None)
     assert scored.buywise_score is not None
-    # Rating component should be 0
+    # Rating component should be neutral baseline (0.5 * 30.0 = 15.0)
     assert scored.score_breakdown is not None
-    assert scored.score_breakdown.rating == 0.0
+    assert scored.score_breakdown.rating == 15.0
 
 
 # ---------------------------------------------------------------------------
